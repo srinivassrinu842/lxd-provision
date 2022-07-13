@@ -20,19 +20,16 @@ Vagrant.configure("2") do |config|
 	
     systemctl disable --now ufw >/dev/null 2>&1
 
-    cat >>/etc/modules-load.d/containerd.conf<<EOF
-    overlay
-    br_netfilter
-    EOF
+    echo "overlay" >> /etc/modules-load.d/containerd.conf
+    echo "br_netfilter" >> /etc/modules-load.d/containerd.conf
 
     modprobe overlay
     modprobe br_netfilter
 	
-    cat >>/etc/sysctl.d/kubernetes.conf<<EOF
-    net.bridge.bridge-nf-call-ip6tables = 1
-    net.bridge.bridge-nf-call-iptables  = 1
-    net.ipv4.ip_forward                 = 1
-    EOF
+    echo "net.bridge.bridge-nf-call-ip6tables = 1" >> /etc/sysctl.d/kubernetes.conf
+    echo "net.bridge.bridge-nf-call-iptables  = 1" >> /etc/sysctl.d/kubernetes.conf
+    echo "net.ipv4.ip_forward                 = 1" >> /etc/sysctl.d/kubernetes.conf
+
     sysctl --system >/dev/null 2>&1
 	
     curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - >/dev/null 2>&1
@@ -43,5 +40,14 @@ Vagrant.configure("2") do |config|
     echo -e "kubeadmin\nkubeadmin" | passwd kadmin >/dev/null 2>&1
     echo -e "kubeadmin\nkubeadmin" | passwd root >/dev/null 2>&1
     echo "export TERM=xterm" >> /etc/bash.bashrc
+
+    sed -i 's/^PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
+    systemctl reload sshd
+	
+	gpasswd -a vagrant lxd
+	gpasswd -a kadmin lxd
+	
+	systemctl enable --now lxd
   SHELL
 end
